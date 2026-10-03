@@ -55,7 +55,11 @@ fi
 PATH_SUBST_ARR=("${(@f)PATH_SUBST}")
 
 #sourced from helper_functions.sh
+# Keep both the raw query (to preserve slash/path intent) and parsed terms
+# (to preserve quoted phrases and PathFind's existing query semantics) for ranking.
+export PATHFIND_RAW_QUERY=$1
 _argparse $1
+export PATHFIND_RANK_TERMS="${(F)args}"
 
 # item_depth = the number of directories ABOVE the item
 # if pdd == 0 then show full path in subtitle
@@ -69,6 +73,28 @@ jq \
 	(env.PATH_DISPLAY_DEPTH // 0 | tonumber) as $pdd |
 	(env.SLOW_AFTER // 0 | tonumber) as $slow |
 	(env.DEBUG=="true" or env.DEBUG=="1") as $dbg |
+
+	# Ranking helpers. Filtering remains unchanged; these only reorder matches.
+	def trim: sub("^\\s+";"") | sub("\\s+$";"");
+	def seq_positions($p; $q):
+		if (($q|length) == 0 or ($p|length) < ($q|length)) then []
+		else [range(0; (($p|length)-($q|length)+1)) as $i
+			| select([range(0; ($q|length)) as $j
+				| ($p[$i+$j] == $q[$j])] | all)
+			| $i]
+		end;
+	def component_score($parts; $q):
+		([ $parts[] |
+			if . == $q then 1000
+			elif startswith($q) then 250
+			elif contains($q) then 100
+			else 0 end
+		] | max // 0);
+
+	(env.PATHFIND_RAW_QUERY // "" | ascii_downcase) as $raw_query |
+	(env.PATHFIND_RANK_TERMS // "" | split("\n") |
+		map(ascii_downcase | trim) | map(select(length>0))) as $query_parts |
+	($raw_query | contains("/")) as $path_query |
 
 	($ARGS.positional | map(
 		sub("^\\s+";"") | sub("\\s+$";"") |
@@ -95,6 +121,27 @@ jq \
 	$fqpn_els[:-1]         as $parent_dirs |
 	$parent_dirs | length  as $item_depth |
 
+	# Prefer path-component matches over incidental substring matches. A slash in
+	# the user's query signals hierarchy, so an exact consecutive component
+	# sequence (Tax/2025) gets a large boost; if that sequence terminates at the
+	# result itself, it gets another boost over descendants of that directory.
+	($fqpn | ascii_downcase | split("/") | map(select(length>0))) as $path_parts |
+	($path_parts | length) as $path_len |
+	($query_parts | length) as $query_len |
+	(seq_positions($path_parts; $query_parts)) as $seqs |
+	(
+		(if ($path_query and $query_len>1 and ($seqs|length)>0) then
+			($seqs | map(. as $i |
+				($path_len-($i+$query_len)) as $descendants |
+				20000 - ($descendants*500) +
+				(if $descendants==0 then 20000 else 0 end)
+			) | max)
+		else 0 end)
+		+ (if ($query_len>0 and $path_parts[-1] == $query_parts[-1]) then 5000 else 0 end)
+		+ ([ $query_parts[] as $q | component_score($path_parts; $q) ] | add // 0)
+		- $path_len
+	) as $rank |
+
 	(if
 		($pdd == 0 or $pdd >= $item_depth) then
 			$parent_dirs
@@ -110,6 +157,7 @@ jq \
 	sub("~/Library/Mobile Documents/com~apple~CloudDocs/";"☁️iCloud/") as $sub |
 
 	{
+		_rank: $rank,
 		title: $item_name,
 		subtitle: $sub,
 		arg: $raw,
@@ -131,10 +179,10 @@ jq \
 			},
 			ctrl: { valid: false }
 		}
-	}) as $results |
+	}) | sort_by(._rank) | reverse | map(del(._rank)) as $results |
 
 	(if ($slow>0 and (now-$st)>$slow) or $dbg then [{
-		title: "Script execution time: \((now-$st)*1000|floor) ms",
+		title: "Script execution time: ((now-$st)*1000|floor) ms",
 		icon: { path: "turtle.png" },
 		subtitle: "If slow, try reducing the search scope or depth",
 		valid: false
