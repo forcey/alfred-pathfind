@@ -30,7 +30,7 @@ git ls-files -z | xargs -0 zip -q -X "$OUT"
 
 # Alfred expects info.plist at the root of the archive, not inside a parent
 # directory.
-if ! unzip -Z1 "$OUT" | grep -qx 'info.plist'; then
+if ! unzip -Z1 "$OUT" | grep -x 'info.plist' >/dev/null; then
   echo "error: built archive does not contain info.plist at its root" >&2
   rm -f "$OUT"
   exit 1
