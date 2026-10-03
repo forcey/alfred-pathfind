@@ -56,7 +56,7 @@ PATH_SUBST_ARR=("${(@f)PATH_SUBST}")
 
 #sourced from helper_functions.sh
 # Keep both the raw query (to preserve slash/path intent) and parsed terms
-# (to preserve quoted phrases and PathFind's existing query semantics) for ranking.
+# (to preserve quoted phrases and the existing PathFind query semantics) for ranking.
 export PATHFIND_RAW_QUERY=$1
 _argparse $1
 export PATHFIND_RANK_TERMS="${(F)args}"
@@ -122,7 +122,7 @@ jq \
 	$parent_dirs | length  as $item_depth |
 
 	# Prefer path-component matches over incidental substring matches. A slash in
-	# the user's query signals hierarchy, so an exact consecutive component
+	# the query slash signals hierarchy, so an exact consecutive component
 	# sequence (Tax/2025) gets a large boost; if that sequence terminates at the
 	# result itself, it gets another boost over descendants of that directory.
 	($fqpn | ascii_downcase | split("/") | map(select(length>0))) as $path_parts |
