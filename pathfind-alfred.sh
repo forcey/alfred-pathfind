@@ -90,6 +90,15 @@ jq \
 			elif contains($q) then 100
 			else 0 end
 		] | max // 0);
+	def junk_component:
+		. == "__pycache__" or
+		. == "node_modules" or
+		. == ".git" or
+		. == ".pytest_cache" or
+		. == ".mypy_cache" or
+		. == ".ruff_cache" or
+		. == ".tox" or
+		. == ".venv";
 
 	(env.PATHFIND_RAW_QUERY // "" | ascii_downcase) as $raw_query |
 	(env.PATHFIND_RANK_TERMS // "" | split("\n") |
@@ -139,6 +148,14 @@ jq \
 		else 0 end)
 		+ (if ($query_len>0 and $path_parts[-1] == $query_parts[-1]) then 5000 else 0 end)
 		+ ([ $query_parts[] as $q | component_score($path_parts; $q) ] | add // 0)
+		# Generated/cache directories are almost never useful Finder destinations.
+		# Penalize them heavily unless the user explicitly searched for that
+		# component, in which case normal scoring applies.
+		- ([ $path_parts[] as $part |
+			select($part | junk_component) |
+			select(($query_parts | index($part)) == null) |
+			50000
+		] | add // 0)
 		- $path_len
 	) as $rank |
 
