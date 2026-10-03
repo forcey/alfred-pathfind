@@ -182,7 +182,7 @@ jq \
 	}) | sort_by(._rank) | reverse | map(del(._rank)) as $results |
 
 	(if ($slow>0 and (now-$st)>$slow) or $dbg then [{
-		title: "Script execution time: ((now-$st)*1000|floor) ms",
+		title: "Script execution time",
 		icon: { path: "turtle.png" },
 		subtitle: "If slow, try reducing the search scope or depth",
 		valid: false
