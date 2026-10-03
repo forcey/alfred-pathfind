@@ -19,6 +19,18 @@ if ! command -v zip >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v zsh >/dev/null 2>&1; then
+  echo "error: zsh is required" >&2
+  exit 1
+fi
+
+# Catch shell quoting/syntax errors before creating an installable package.
+for script in pathfind-alfred.sh pathfind.sh helper_functions.sh install_cli.sh install_deps.sh link.sh; do
+  if [[ -f "$script" ]]; then
+    zsh -n "$script"
+  fi
+done
+
 OUT="${1:-$ROOT/dist/PathFind.alfredworkflow}"
 mkdir -p "$(dirname "$OUT")"
 rm -f "$OUT"
