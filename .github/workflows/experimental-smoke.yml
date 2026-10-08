@@ -1,0 +1,68 @@
+name: PathFind search engines
+on:
+  push:
+    branches: ["main", "experiment/search-engines"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: pathfind-search-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos-smoke:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install command dependencies
+        run: brew install fd gawk jq
+      - name: Run workflow smoke test
+        run: bash experimental/test-smoke.sh
+
+  fff-sdk:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FFF Node SDK
+        run: npm install --prefix experimental --no-audit --no-fund
+      - name: Check persistent FFF index and query
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/fff-test/Tax/2025"
+          export PATHFIND_PATHS="$RUNNER_TEMP/fff-test"
+          node experimental/fff-client.mjs warm
+          node experimental/fff-client.mjs search 'tax/2025' directory
+          node experimental/fff-client.mjs stop
+      - name: Package FFF dependencies into the Alfred workflow
+        run: |
+          ./build.sh
+          unzip -t dist/PathFind.alfredworkflow >/dev/null
+          unzip -Z1 dist/PathFind.alfredworkflow | grep -F 'experimental/node_modules/@ff-labs/fff-node/' >/dev/null
+
+  fsearch-cli:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install JSON utility
+        run: brew install jq
+      - name: Build fsearch
+        run: |
+          git clone --depth=1 https://github.com/noahdunnagan/fsearch.git "$RUNNER_TEMP/fsearch"
+          cargo build --release --manifest-path "$RUNNER_TEMP/fsearch/Cargo.toml"
+      - name: Query a directory using the actual fsearch CLI
+        shell: bash
+        run: |
+          export PATHFIND_PATHS="$HOME/Documents/pathfind-fsearch-test"
+          mkdir -p "$PATHFIND_PATHS/Tax/2025"
+          export PATHFIND_FSEARCH_BIN="$RUNNER_TEMP/fsearch/target/release/fsearch"
+          for i in $(seq 1 70); do
+            result="$(TYPE_OVERRIDE=directory ./experimental/search.sh fsearch 'tax/2025')" || true
+            if printf '%s\n' "$result" | grep -F "$PATHFIND_PATHS/Tax/2025" >/dev/null; then
+              echo "PASS: fsearch returns Tax/2025 through PathFind adapter"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "fsearch never returned the expected path" >&2
+          exit 1

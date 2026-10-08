@@ -1,0 +1,8 @@
+{
+  "name": "pathfind-fff-experiment",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ff-labs/fff-node": "0.11.0"
+  }
+}

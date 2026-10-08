@@ -46,6 +46,16 @@ if [[ -z $1 ]]; then
 	exit
 fi
 
+# Indexed backends need explicit roots; silently defaulting to the installed
+# workflow folder would produce a misleading empty search in Alfred.
+if [[ -n $PATHFIND_BACKEND && -z $PATHFIND_PATHS ]]; then
+  jq -n --arg backend "$PATHFIND_BACKEND" '
+    {items:[{title:("Configure Include paths for " + $backend),
+             subtitle:"Alfred Preferences > Workflows > PathFind Search Engine Experiment > Configure Workflow",
+             valid:false,icon:{path:"error.png"}}]}'
+  exit 0
+fi
+
 # ensure we have at least 1 path
 if [[ -z $PATHFIND_PATHS ]]; then
 	export PATHFIND_PATHS=$PWD
@@ -65,7 +75,34 @@ export PATHFIND_RANK_TERMS="${(F)args}"
 # if pdd == 0 then show full path in subtitle
 export START_TIME=$EPOCHREALTIME
 
-./pathfind.sh "${args[@]}" |
+# Keep one result formatter/scorer for fd and both experimental engines.
+if [[ -n $PATHFIND_BACKEND ]]; then
+  CANDIDATE_COMMAND=(./experimental/search.sh "$PATHFIND_BACKEND" "$1")
+else
+  CANDIDATE_COMMAND=(./pathfind.sh "${args[@]}")
+fi
+
+# The original pipeline discarded backend failures, causing Alfred to say
+# Nothing found even if an indexed engine could not launch or access its roots.
+# Capture experimental backend stderr and emit a visible actionable Alfred item.
+if [[ -n $PATHFIND_BACKEND ]]; then
+  candidate_file="$(mktemp "${TMPDIR:-/tmp}/pathfind-candidates.XXXXXXXX")"
+  error_file="$(mktemp "${TMPDIR:-/tmp}/pathfind-error.XXXXXXXX")"
+  "${CANDIDATE_COMMAND[@]}" > "$candidate_file" 2> "$error_file"
+  candidate_status=$?
+  if (( candidate_status != 0 )); then
+    error_text="$(tail -n 5 "$error_file" | tr '\n' ' ' | cut -c 1-450)"
+    [[ -n $error_text ]] || error_text="Exit status $candidate_status"
+    jq -n --arg name "$PATHFIND_BACKEND" --arg message "$error_text" '
+      {items:[{title:("Search engine error (" + $name + ")"),
+               subtitle:$message,valid:false,icon:{path:"error.png"}}]}'
+    rm -f "$candidate_file" "$error_file"
+    exit 0
+  fi
+  CANDIDATE_COMMAND=(cat "$candidate_file")
+fi
+
+"${CANDIDATE_COMMAND[@]}" |
 jq \
 	--null-input \
 	--raw-input \
@@ -210,7 +247,11 @@ jq \
 		if ($results|length)>0 then $results
 		else [{
 			title: "Nothing found!",
-			subtitle: "Try some different search terms",
+			subtitle: (
+				if (env.PATHFIND_BACKEND // "") != "" then
+					(env.PATHFIND_BACKEND + " returned no results. Include paths: " +
+					((env.PATHFIND_PATHS // "") | split("\n") | join("; ") | .[:150]))
+				else "Try some different search terms" end),
 			icon: { path: "error.png" },
 			valid: false,
 			mods: {
@@ -220,6 +261,10 @@ jq \
 			}
 		}] end)
 	}' --args "${PATH_SUBST_ARR[@]}"
+
+if [[ -n $candidate_file ]]; then
+  rm -f "$candidate_file" "$error_file"
+fi
 
 if _isTrue DEBUG ; then
 	ELAPSED=$(( (EPOCHREALTIME-START_TIME) * 1000))

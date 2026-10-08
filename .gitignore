@@ -1,0 +1,9 @@
+# Generated workflow bundles
+dist/
+
+# Native FFF experiment installation
+experimental/node_modules/
+experimental/package-lock.json
+
+# Smoke-test / benchmark bytecode
+experimental/__pycache__/
