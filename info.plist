@@ -2031,7 +2031,8 @@ The workflow was inspired by [this post](https://www.alfredforum.com/topic/22886
 			<key>config</key>
 			<dict>
 				<key>default</key>
-				<string>~</string>
+				<string>~/Documents
+~/Library/CloudStorage</string>
 				<key>required</key>
 				<true/>
 				<key>trim</key>
