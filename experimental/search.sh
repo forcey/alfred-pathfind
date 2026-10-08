@@ -66,7 +66,7 @@ esac
 # fsearch intentionally omits consent-gated directories without Full Disk
 # Access. Surface the missing coverage instead of silently reporting no hits.
 status_json="$("$fsearch_bin" status 2>/dev/null)"
-access="$(print -r -- "$status_json" | jq -r '.full_disk_access // empty' 2>/dev/null)"
+access="$(print -r -- "$status_json" | jq -r 'if has("full_disk_access") then .full_disk_access else empty end' 2>/dev/null)"
 for root in "${paths[@]}"; do
   [[ -n "$root" ]] || continue
   [[ "$root" == "~" ]] && root="$HOME"
