@@ -89,5 +89,5 @@ for root in "${paths[@]}"; do
   # Quoting the entire in: value keeps spaces in Google Drive paths intact.
   # fsearch parses query words; the quote characters must reach that parser.
   "$fsearch_bin" "$query" "in:\"$scope\"" "${kind[@]}" "limit:500" --json |
-    jq -r 'if .ok == true then (.hits // [] | .[] | .path) else empty end'
+    jq -r 'if .ok == true then (.hits // [] | .[] | .path) else error(.error // "fsearch query failed") end'
 done | awk '!seen[$0]++'
