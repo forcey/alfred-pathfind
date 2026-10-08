@@ -73,6 +73,31 @@ rm "$scratch/Google Drive"
 rmdir "$gated"
 echo "PASS: Full Disk Access warning covers gated directories and symlink aliases"
 
+# Reproduce an Alfred-only configuration that includes a tilde symlink root.
+# The old adapter could skip these while succeeding with absolute CLI roots.
+mkdir -p "$scratch/GoogleDrive-real/My Drive/Tax/2025"
+link="$HOME/PathFind Google Drive CI $"
+ln -s "$scratch/GoogleDrive-real" "$link"
+cat > "$scratch/mock-fsearch-ok" <<'EOS'
+#!/bin/sh
+if [ "$1" = status ]; then
+  printf '%s\n' '{"ok":true,"full_disk_access":true}'
+else
+  printf '%s\n' "$@" > "$PATHFIND_FSEARCH_LOG"
+  printf '{"ok":true,"hits":[{"path":"%s"}]}\n' "$PATHFIND_FSEARCH_EXPECTED"
+fi
+EOS
+chmod +x "$scratch/mock-fsearch-ok"
+export PATHFIND_PATHS="~/${link##*/}"
+export PATHFIND_FSEARCH_BIN="$scratch/mock-fsearch-ok"
+export PATHFIND_FSEARCH_LOG="$scratch/fsearch-args.txt"
+export PATHFIND_FSEARCH_EXPECTED="$scratch/GoogleDrive-real/My Drive/Tax/2025"
+result="$(./pathfind-alfred.sh 'tax/2025')"
+jq -e --arg expected "$PATHFIND_FSEARCH_EXPECTED" '.items[0].arg == $expected' <<<"$result" >/dev/null
+grep -Fx "in:\"$scratch/GoogleDrive-real\"" "$PATHFIND_FSEARCH_LOG" >/dev/null
+rm "$link"
+echo "PASS: Alfred tilde + Google Drive symlink root resolves to canonical fsearch scope"
+
 unset PATHFIND_FSEARCH_BIN
 PATHFIND_PATHS="$scratch"
 PATHFIND_BACKEND=""
