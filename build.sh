@@ -25,7 +25,7 @@ if ! command -v zsh >/dev/null 2>&1; then
 fi
 
 # Catch shell quoting/syntax errors before creating an installable package.
-for script in pathfind-alfred.sh pathfind.sh helper_functions.sh install_cli.sh install_deps.sh link.sh; do
+for script in pathfind-alfred.sh pathfind.sh helper_functions.sh install_cli.sh install_deps.sh link.sh experimental/search.sh; do
   if [[ -f "$script" ]]; then
     zsh -n "$script"
   fi
