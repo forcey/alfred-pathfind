@@ -15,11 +15,21 @@ if [[ "$query" == *"in:"* ]]; then
 fi
 
 if [[ "$backend" == "fff" ]]; then
-  if ! hash node 2>/dev/null; then
-    echo "PathFind FFF: node was not found on PATH" >&2
+  node_bin="${PATHFIND_FFF_NODE_BIN:-}"
+  if [[ -z "$node_bin" ]]; then
+    if hash node 2>/dev/null; then
+      node_bin="$(command -v node)"
+    elif [[ -x /opt/homebrew/bin/node ]]; then
+      node_bin=/opt/homebrew/bin/node
+    elif [[ -x /usr/local/bin/node ]]; then
+      node_bin=/usr/local/bin/node
+    fi
+  fi
+  if [[ -z "$node_bin" || ! -x "$node_bin" ]]; then
+    echo "PathFind FFF: Node is not accessible; set PATHFIND_FFF_NODE_BIN" >&2
     exit 1
   fi
-  exec node "$ROOT/fff-client.mjs" search "$query" "${TYPE_OVERRIDE:-}"
+  exec "$node_bin" "$ROOT/fff-client.mjs" search "$query" "${TYPE_OVERRIDE:-}"
 fi
 
 if [[ "$backend" != "fsearch" ]]; then
@@ -27,8 +37,18 @@ if [[ "$backend" != "fsearch" ]]; then
   exit 2
 fi
 
-if ! hash fsearch 2>/dev/null; then
-  echo "PathFind fsearch: install the fsearch CLI first" >&2
+fsearch_bin="${PATHFIND_FSEARCH_BIN:-}"
+if [[ -z "$fsearch_bin" ]]; then
+  if hash fsearch 2>/dev/null; then
+    fsearch_bin="$(command -v fsearch)"
+  elif [[ -x "$HOME/.local/bin/fsearch" ]]; then
+    fsearch_bin="$HOME/.local/bin/fsearch"
+  elif [[ -x /opt/homebrew/bin/fsearch ]]; then
+    fsearch_bin=/opt/homebrew/bin/fsearch
+  fi
+fi
+if [[ -z "$fsearch_bin" || ! -x "$fsearch_bin" ]]; then
+  echo "PathFind fsearch: CLI unavailable; set PATHFIND_FSEARCH_BIN" >&2
   exit 1
 fi
 
@@ -54,6 +74,6 @@ for root in "${paths[@]}"; do
   scope="$(cd -P "$root" && pwd)"
   # Quoting the entire in: value keeps spaces in Google Drive paths intact.
   # fsearch parses query words; the quote characters must reach that parser.
-  fsearch "$query" "in:\"$scope\"" "${kind[@]}" "limit:500" --json |
+  "$fsearch_bin" "$query" "in:\"$scope\"" "${kind[@]}" "limit:500" --json |
     jq -r 'if .ok == true then (.hits // [] | .[] | .path) else empty end'
 done | awk '!seen[$0]++'
