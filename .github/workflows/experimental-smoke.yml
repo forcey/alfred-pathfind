@@ -28,3 +28,8 @@ jobs:
           node experimental/fff-client.mjs warm
           node experimental/fff-client.mjs search 'tax/2025' directory
           node experimental/fff-client.mjs stop
+      - name: Package FFF dependencies into the Alfred workflow
+        run: |
+          ./build.sh
+          unzip -t dist/PathFind.alfredworkflow >/dev/null
+          unzip -Z1 dist/PathFind.alfredworkflow | grep -F 'experimental/node_modules/@ff-labs/fff-node/' >/dev/null
