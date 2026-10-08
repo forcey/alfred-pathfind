@@ -25,8 +25,24 @@ if [[ "$backend" == "fff" ]]; then
       node_bin=/usr/local/bin/node
     fi
   fi
+  if [[ -z "$node_bin" ]]; then
+    # GUI applications normally do not inherit the PATH set by shell startup
+    # scripts. Probe common user-managed Node installations as a convenience.
+    for candidate in \
+      "$HOME"/.nvm/versions/node/*/bin/node(N) \
+      "$HOME"/.fnm/node-versions/*/installation/bin/node(N) \
+      "$HOME"/.local/share/mise/installs/node/*/bin/node(N) \
+      "$HOME"/.volta/bin/node \
+      "$HOME"/.local/share/mise/shims/node \
+      "$HOME"/.asdf/shims/node; do
+      if [[ -x "$candidate" ]]; then
+        node_bin="$candidate"
+        break
+      fi
+    done
+  fi
   if [[ -z "$node_bin" || ! -x "$node_bin" ]]; then
-    echo "PathFind FFF: Node is not accessible; set PATHFIND_FFF_NODE_BIN" >&2
+    echo "PathFind FFF: Node not found. Run 'command -v node' in Terminal, then paste its absolute path into Configure Workflow > Node executable (FFF)." >&2
     exit 1
   fi
   exec "$node_bin" "$ROOT/fff-client.mjs" search "$query" "${TYPE_OVERRIDE:-}"
