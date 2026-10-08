@@ -59,7 +59,9 @@ def main():
             ordered = sorted(measurements[1:] or measurements)
             p50 = statistics.median(ordered)
             p95 = ordered[max(0, int(len(ordered) * .95) - 1)]
-            rank = (paths.index(args.expected) + 1) if args.expected in paths else "-"
+            normalized = [os.path.realpath(p.rstrip("/")) for p in paths]
+            expected = os.path.realpath(args.expected) if args.expected else None
+            rank = (normalized.index(expected) + 1) if expected in normalized else "-"
             print(f"{backend:<9} {measurements[0]:>10.1f} {p50:>10.1f} {p95:>10.1f} {len(paths):>8} {str(rank):>14}")
             for item in paths[:3]:
                 print("  ", item)
