@@ -72,6 +72,26 @@ else
   CANDIDATE_COMMAND=(./pathfind.sh "${args[@]}")
 fi
 
+# The original pipeline discarded backend failures, causing Alfred to say
+# Nothing found even if an indexed engine could not launch or access its roots.
+# Capture experimental backend stderr and emit a visible actionable Alfred item.
+if [[ -n $PATHFIND_BACKEND ]]; then
+  candidate_file="$(mktemp "${TMPDIR:-/tmp}/pathfind-candidates.XXXXXXXX")"
+  error_file="$(mktemp "${TMPDIR:-/tmp}/pathfind-error.XXXXXXXX")"
+  "${CANDIDATE_COMMAND[@]}" > "$candidate_file" 2> "$error_file"
+  candidate_status=$?
+  if (( candidate_status != 0 )); then
+    error_text="$(tail -n 5 "$error_file" | tr '\n' ' ' | cut -c 1-450)"
+    [[ -n $error_text ]] || error_text="Exit status $candidate_status"
+    jq -n --arg name "$PATHFIND_BACKEND" --arg message "$error_text" '
+      {items:[{title:("Search engine error (" + $name + ")"),
+               subtitle:$message,valid:false,icon:{path:"error.png"}}]}'
+    rm -f "$candidate_file" "$error_file"
+    exit 0
+  fi
+  CANDIDATE_COMMAND=(cat "$candidate_file")
+fi
+
 "${CANDIDATE_COMMAND[@]}" |
 jq \
 	--null-input \
@@ -217,7 +237,11 @@ jq \
 		if ($results|length)>0 then $results
 		else [{
 			title: "Nothing found!",
-			subtitle: "Try some different search terms",
+			subtitle: (
+				if (env.PATHFIND_BACKEND // "") != "" then
+					(env.PATHFIND_BACKEND + " returned no results. Include paths: " +
+					((env.PATHFIND_PATHS // "") | split("\n") | join("; ") | .[:150]))
+				else "Try some different search terms" end),
 			icon: { path: "error.png" },
 			valid: false,
 			mods: {
@@ -227,6 +251,10 @@ jq \
 			}
 		}] end)
 	}' --args "${PATH_SUBST_ARR[@]}"
+
+if [[ -n $candidate_file ]]; then
+  rm -f "$candidate_file" "$error_file"
+fi
 
 if _isTrue DEBUG ; then
 	ELAPSED=$(( (EPOCHREALTIME-START_TIME) * 1000))
