@@ -18,6 +18,10 @@ is still installed alongside it.
 
 ## Installation on macOS
 
+For complete initial installation and backend **upgrade instructions**,
+see the [main README](../README.md#search-backends-and-keywords). The steps
+below are for developing or benchmarking the indexed adapters.
+
 1. Build the [fsearch](https://github.com/noahdunnagan/fsearch) CLI:
 
    ```sh
@@ -67,23 +71,23 @@ is still installed alongside it.
 
    If `experimental/node_modules` exists during packaging, the build includes
    it so the imported workflow has the native Node dependencies. If absent,
-   `pfx` / `pfxd` will not work until the dependencies are installed inside
+   `ff` / `ffd` will not work until the dependencies are installed inside
    the imported PathFind workflow directory.
 
 4. Open the imported PathFind workflow's Configuration in Alfred.
-   Copy the same Include paths, excludes, hidden-file and max-depth settings
-   as the main workflow. **A `PATHFIND_PATHS` export in Terminal does not
+   Verify the Include paths, excludes, hidden-file and max-depth settings
+   in your existing PathFind workflow. **A `PATHFIND_PATHS` export in Terminal does not
    configure Alfred**. If you see zero hits in Alfred despite successful
    command-line tests, check the imported PathFind workflow configuration.
-   Prefer the canonical CloudStorage path instead of a Finder alias (your
-   original `~/Google Drive` shortcut may not refer to the indexed path).
+   The `~/Google Drive` symlink is supported: the adapters resolve it to
+   its canonical CloudStorage target before searching.
    Bear in mind that each indexer has **different** support for these flags;
    this is a comparison, not drop-in parity.
 
-   If Alfred cannot locate Node or fsearch from its constrained launch
-   environment, install Node in /opt/homebrew/bin or /usr/local/bin and
-   fsearch in ~/.local/bin (or set PATHFIND_FFF_NODE_BIN and
-   PATHFIND_FSEARCH_BIN as workflow environment variables).
+   If Alfred cannot find Node on its restricted GUI PATH, paste the output
+   of `command -v node` in **Configure Workflow → Node executable (FFF)**.
+   The fsearch CLI is installed to `~/.local/bin/fsearch` by its upstream
+   `install --login` command.
 
 ## Benchmark
 
@@ -149,18 +153,19 @@ TYPE_OVERRIDE=directory ./experimental/search.sh fff 'tax/2025'
 
 ## Diagnosing an empty Alfred search
 
-The experimental Script Filter now shows an error item if a backend fails,
+The indexed Script Filter shows an error item if a backend fails,
 including messages about missing Full Disk Access. If it simply says
 "Nothing found", the subtitle shows which Include paths Alfred actually used.
 
-Try `pfxd tax/2025`, `pfsd tax/2025`, and `pf0d tax/2025` with identical
+Try `ffd tax/2025`, `fsd tax/2025`, and `fdd tax/2025` with identical
 Include paths. The Terminal `export PATHFIND_PATHS=...` only influences
 terminal commands; Alfred has its own workflow configuration. If
 `fsearch status` says `full_disk_access: false`, it cannot search
 Google Drive CloudStorage. When changing its permissions, restart it and
 rebuild the index if those paths remain missing.
 
-After pulling a new branch commit, run `./build.sh` then double-click
+After pulling changes from `main`, run `npm install --prefix experimental`
+(if needed) followed by `./build.sh`, then double-click
 `dist/PathFind.alfredworkflow` to update the installed PathFind workflow.
 The running FFF service can be restarted with
 `node experimental/fff-client.mjs stop` before warming the index again.
