@@ -65,7 +65,14 @@ export PATHFIND_RANK_TERMS="${(F)args}"
 # if pdd == 0 then show full path in subtitle
 export START_TIME=$EPOCHREALTIME
 
-./pathfind.sh "${args[@]}" |
+# Keep one result formatter/scorer for fd and both experimental engines.
+if [[ -n $PATHFIND_BACKEND ]]; then
+  CANDIDATE_COMMAND=(./experimental/search.sh "$PATHFIND_BACKEND" "$1")
+else
+  CANDIDATE_COMMAND=(./pathfind.sh "${args[@]}")
+fi
+
+"${CANDIDATE_COMMAND[@]}" |
 jq \
 	--null-input \
 	--raw-input \
