@@ -4,6 +4,10 @@ on:
     branches: ["experiment/search-engines"]
   workflow_dispatch:
 
+concurrency:
+  group: pathfind-experiment-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   macos-smoke:
     runs-on: macos-latest
