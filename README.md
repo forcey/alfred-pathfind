@@ -13,51 +13,226 @@ Searches are case-insensitive, and the order in which you enter your search term
 
 You can pass *quoted strings* to be more explicit with your queries, e.g. "annual report" will NOT match a file named "annual sales report". Only **double-quotes** are considered—single-quotes are parsed as normal punctuation. Non-quoted strings will be split on spaces (which has always been the case).
 
-## Search engines in this fork
+## Search backends and keywords
 
-This fork includes three search backends, all using the same path-aware ranking
-(which prefers exact paths like `Tax/2025` and demotes generated directories
-like `node_modules` and `__pycache__`).
+This fork adds two indexed search backends alongside the original
+[fd](https://github.com/sharkdp/fd) backend. All three feed paths to the same
+Alfred result formatter and **path-aware ranking**: an exact path such as
+`Tax/2025` is preferred to loosely related descendants, and generated
+directories such as `__pycache__` and `node_modules` are heavily demoted
+unless explicitly requested.
 
-| Keyword | Engine | Search type |
-|---|---|---|
-| `pf` / `pfd` | original `fd` | files + folders / folders only |
-| `fd` / `fdd` | `fd` (comparison baseline) | files + folders / folders only |
-| `fs` / `fsd` | [fsearch](https://github.com/noahdunnagan/fsearch) | files + folders / folders only |
-| `ff` / `ffd` | [fff](https://github.com/dmtrKovalenko/fff) | files + folders / folders only |
+| Files and folders | Folders only | Backend | How it searches |
+| --- | --- | --- | --- |
+| `pf` | `pfd` | [fd](https://github.com/sharkdp/fd) (original) | Walks the selected search roots on each query; no separate index. |
+| `fd` | `fdd` | [fd](https://github.com/sharkdp/fd) (comparison alias) | Same implementation as `pf` / `pfd`. |
+| `fs` | `fsd` | [fsearch](https://github.com/noahdunnagan/fsearch) | Uses a persistent macOS-wide name index and a background daemon. |
+| `ff` | `ffd` | [fff](https://github.com/dmtrKovalenko/fff) | Uses an in-memory index via the [Node SDK](https://github.com/dmtrKovalenko/fff/tree/main/packages/fff-node) and a small persistent local process. |
 
-The original `pff`, `pfc`, and auxiliary commands remain available.
+Examples: `pfd tax/2025`, `fsd tax/2025`, or `ffd tax/2025`.
+The original `pff` (files only), `pfc` (active Finder folder), and
+auxiliary triggers remain available; the normal `pf` keyword is configurable.
 
-To build the complete workflow on macOS:
+**The engines are not semantically identical.** Their fuzzy matching,
+ignore rules, symlink handling, and candidate limits can differ. For example,
+`fsearch` may omit a result when none of the search words matches its own
+filename, even though the words appear in ancestor directories. The shared
+ranking only orders candidates each backend actually returns. Queries using
+PathFind's `in:` *Spotlight content* syntax fall back to the original fd
+implementation with Spotlight content filtering, not indexed content search
+from fsearch or fff. Regex and quoting behavior described below principally
+refer to the original fd backend.
+
+### Install the workflow and required tools (macOS)
+
+Requirements: **Alfred 5.6.1+**, [Homebrew](https://brew.sh/), and (for
+`ff` / `ffd`) **Node.js 18+** with npm. Rust/Cargo is needed only to
+build `fsearch` from source.
 
 ```sh
+git clone https://github.com/forcey/alfred-pathfind.git
+cd alfred-pathfind
+
+# Mandatory for the original workflow and its shared result formatter:
 brew install fd gawk jq
-npm install --prefix experimental  # FFF Node SDK; needs Node.js 18+
+
+# For fff: install the pinned Node SDK and native platform dependency.
+npm install --prefix experimental
+
+# Build an installable Alfred workflow with the FFF SDK bundled.
 ./build.sh
 open dist/PathFind.alfredworkflow
 ```
 
-`fsearch` is a **separate** Rust CLI and daemon; install it according to its
-[upstream README](https://github.com/noahdunnagan/fsearch).
-You may need to grant its binary Full Disk Access on macOS, restart the
-daemon, and rebuild its index after initially denying access.
+`fsearch` is installed separately (see below), while the `fff` SDK must be
+installed **before building** so `build.sh` can include
+`experimental/node_modules` in the `.alfredworkflow` package. You can omit
+the optional FFF npm install if you only use fd/fsearch; the `ff` triggers
+will not work without that SDK.
 
-In Alfred's **Configure Workflow**, set the **Include paths** to the desired
-directories. The `~/Google Drive` shortcut works when it points to the
-physical directory under `~/Library/CloudStorage`; the indexed adapters
-resolve configured symlinks. If Alfred cannot find Node, fill in the
-**Node executable (FFF)** setting with the absolute output of
-`command -v node`.
+The package has the **original PathFind bundle ID**
+(`com.luckman212.pathfind`), so importing it updates your existing PathFind
+workflow. If you installed an older, separately named *PathFind Search Engine
+Experiment* workflow, remove/disable it in Alfred to avoid duplicate triggers.
 
-**Important for existing users:** this branch is now built with the original
-`com.luckman212.pathfind` workflow bundle ID, so importing it updates your
-usual PathFind installation. Remove/disable the separately installed
-**PathFind Search Engine Experiment** workflow (bundle ID
-`com.forcey.pathfind.search-experiment`) to avoid having two different sets
-of keywords and indexes active. Your existing Alfred workflow configuration
-may be preserved when reimporting.
+In **Alfred Preferences → Workflows → PathFind → Configure Workflow**, set
+the **Include paths** (one per line), for example:
 
-See [the backend benchmark and diagnostics guide](experimental/README.md).
+```text
+~/Documents
+~/Downloads
+~/Google Drive
+~/Library/Mobile Documents/com~apple~CloudDocs
+```
+
+A symlinked `~/Google Drive` pointing to
+`~/Library/CloudStorage/...` is supported: the indexed backend adapters
+resolve configured search roots to their physical paths. Alfred's workflow
+configuration is independent of any `PATHFIND_PATHS` variable exported in
+your Terminal.
+
+### fd: install and update
+
+**Upstream:** [sharkdp/fd](https://github.com/sharkdp/fd)
+
+```sh
+brew install fd          # first installation
+brew upgrade fd          # later upgrades
+fd --version
+```
+
+The existing `pf` / `pfd` and new `fd` / `fdd` keywords use the same
+fd installation. There is no fd index to initialize or restart. `gawk` and
+`jq` are shared dependencies; update them with `brew upgrade gawk jq`
+when desired.
+
+### fsearch: install and update
+
+**Upstream:** [noahdunnagan/fsearch](https://github.com/noahdunnagan/fsearch)
+
+`fsearch` is a separate Rust binary plus a macOS LaunchAgent named
+`mt.nd.fsearch`. Install [Rust/Cargo](https://rustup.rs/) if needed, then:
+
+```sh
+git clone https://github.com/noahdunnagan/fsearch.git
+cd fsearch
+cargo build --release
+./target/release/fsearch install --login
+~/.local/bin/fsearch status
+```
+
+The `install --login` command copies the binary to
+`~/.local/bin/fsearch`, registers it to run at login, and restarts the
+LaunchAgent. In **System Settings → Privacy & Security → Full Disk Access**,
+add and enable the **installed** `~/.local/bin/fsearch` executable (not just
+Terminal) if you need results from Google Drive, Documents, etc.
+Verify `"full_disk_access": true` in `fsearch status`.
+
+To **update fsearch**, run these commands from your existing *fsearch* source
+checkout (not the PathFind checkout):
+
+```sh
+git pull --ff-only
+cargo build --release
+./target/release/fsearch install --login
+~/.local/bin/fsearch status
+```
+
+**Check Full Disk Access again after updating.** The install command replaces
+the executable rather than modifying it in place, so macOS might not retain
+its existing permission. A restarted daemon normally reuses its saved index.
+
+If Google Drive is missing even after granting Full Disk Access, the saved
+index may have been created when that directory was inaccessible. After
+confirming Full Disk Access, you can force a one-time rebuild (keeping a
+backup):
+
+```sh
+launchctl bootout "gui/$(id -u)/mt.nd.fsearch"
+INDEX="$HOME/Library/Application Support/FSearch/index.bin"
+if [ -f "$INDEX" ]; then
+  mv "$INDEX" "$INDEX.bak.$(date +%Y%m%d-%H%M%S)"
+fi
+launchctl bootstrap "gui/$(id -u)" \
+  "$HOME/Library/LaunchAgents/mt.nd.fsearch.plist"
+~/.local/bin/fsearch status
+```
+
+Wait for the initial scan to finish, then confirm scoped results:
+
+```sh
+ROOT="$(cd -P "$HOME/Google Drive" && pwd)"
+~/.local/bin/fsearch "tax kind:dir in:\"$ROOT\" limit:100" --json |
+  jq -r '.hits[].path'
+```
+
+**An fsearch update does not require rebuilding PathFind's Alfred package**
+unless the adapter/scripts in this repository have changed.
+
+### fff: install and update
+
+**Upstream:** [dmtrKovalenko/fff](https://github.com/dmtrKovalenko/fff)
+and [the `@ff-labs/fff-node` SDK](https://github.com/dmtrKovalenko/fff/tree/main/packages/fff-node)
+
+PathFind uses `@ff-labs/fff-node`, **not** the separate `fff-mcp`
+executable or Neovim plugin. Our `experimental/fff-client.mjs` starts a
+persistent local Node process that maintains the index for the configured
+roots across Alfred queries.
+
+Install the **version pinned in `experimental/package.json`** from your
+PathFind checkout:
+
+```sh
+npm install --prefix experimental
+```
+
+To deliberately **upgrade the FFF SDK to the newest published version**:
+
+```sh
+# From the PathFind checkout:
+npm install --prefix experimental --save-exact @ff-labs/fff-node@latest
+node experimental/fff-client.mjs stop
+
+# Rebuild so Alfred gets the new native SDK bundle:
+./build.sh
+open dist/PathFind.alfredworkflow
+```
+
+The first command updates the SDK dependency in
+`experimental/package.json` as well as local `node_modules`. Commit that
+dependency change to your fork if you want future builds to use it.
+For routine workflow rebuilds, plain `npm install --prefix experimental`
+uses the pinned version; it **does not** automatically upgrade that version.
+The background FFF process automatically restarts on the next search after
+being stopped.
+
+If `ff` says **Node not accessible**, run `command -v node` in Terminal
+and paste the absolute executable path into Alfred's **Configure Workflow →
+Node executable (FFF)** setting. GUI apps often do not inherit shell-managed
+Node paths. To prime or reset a local FFF index, see
+[the development and benchmark guide](experimental/README.md).
+
+### Update PathFind itself
+
+From the **PathFind** checkout, pull the latest workflow scripts, re-install
+the pinned FFF SDK if necessary, rebuild, and import:
+
+```sh
+git switch main
+git pull --ff-only
+npm install --prefix experimental
+./build.sh
+open dist/PathFind.alfredworkflow
+```
+
+Unlike `fsearch`, PathFind itself is updated by importing a new
+`.alfredworkflow` package; simply pulling GitHub changes does **not**
+modify the workflow currently installed in Alfred. Check your saved Include
+paths after reimporting, and remove the retired experimental workflow if
+it is still installed.
+
+For engine-specific performance tests and diagnostics, see
+[experimental/README.md](experimental/README.md).
 
 ## Configuration
 
@@ -90,7 +265,7 @@ Due to a bug in `fd`, the **Exclude** feature does not always work as expected. 
 
 ## Usage
 
-Activate one of the trigger keywords:
+Activate one of the trigger keywords. The [backend keyword table](#search-backends-and-keywords) above lists all eight engine selectors:
 - `pf` for normal mode
 - `pfd` to search Folders (directories) only
 - `pff` to search Files only
@@ -107,21 +282,6 @@ During the installation, you may be prompted for your password so the workflow c
 After it's installed, you can type `pathfind <word1> [word2...]` from any shell to get the results in text format.
 
 ![](./enable_automation.png)
-
-## Prerequisites
-
-Alfred 5.6.1 or higher is required.
-
-The workflow requires a few small binaries to work its magic:
-- `fd` for fast, multithreaded filesystem searching
-- `gawk` for case-insensitive pattern/regex matching of filenames
-- `jq` for JSON processing
-
-The workflow will warn you if these are not detected, and offer to install them for you. If you prefer, they can be installed with a single [Homebrew](https://brew.sh/) command run from Terminal:
-
-```
-brew install fd gawk jq
-```
 
 ## ⚠️Potential Gotchas
 
