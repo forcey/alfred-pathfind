@@ -13,3 +13,18 @@ jobs:
         run: brew install fd gawk jq
       - name: Run workflow smoke test
         run: bash experimental/test-smoke.sh
+
+  fff-sdk:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FFF Node SDK
+        run: npm install --prefix experimental --no-audit --no-fund
+      - name: Check persistent FFF index and query
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/fff-test/Tax/2025"
+          export PATHFIND_PATHS="$RUNNER_TEMP/fff-test"
+          node experimental/fff-client.mjs warm
+          node experimental/fff-client.mjs search 'tax/2025' directory
+          node experimental/fff-client.mjs stop
