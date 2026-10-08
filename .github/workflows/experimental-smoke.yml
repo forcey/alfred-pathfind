@@ -1,0 +1,15 @@
+name: Experimental search engines
+on:
+  push:
+    branches: ["experiment/search-engines"]
+  workflow_dispatch:
+
+jobs:
+  macos-smoke:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install command dependencies
+        run: brew install fd gawk jq
+      - name: Run workflow smoke test
+        run: bash experimental/test-smoke.sh
