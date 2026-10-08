@@ -10,6 +10,49 @@ command -v gawk >/dev/null
 command -v jq >/dev/null
 
 plutil -lint info.plist
+# Verify the installed workflow contains every requested trigger, the correct
+# backend, and action connections. This also catches duplicate Alfred keywords.
+python3 - <<'PY'
+import plistlib
+with open("info.plist", "rb") as fp:
+    data = plistlib.load(fp)
+assert data["bundleid"] == "com.luckman212.pathfind"
+assert data["name"] == "PathFind"
+settings = {field["variable"]: field["config"] for field in data["userconfigurationconfig"]}
+assert settings["KW_TRIGGER"]["default"] == "pf"
+by_keyword = {}
+for obj in data["objects"]:
+    if obj["type"] != "alfred.workflow.input.scriptfilter":
+        continue
+    keyword = obj["config"]["keyword"]
+    for token in keyword.split("||"):
+        assert token not in by_keyword, f"duplicate keyword {token}"
+        by_keyword[token] = obj
+expected = {
+    "{var:KW_TRIGGER}": (None, None),
+    "pfd": (None, "directory"),
+    "fd": (None, None),
+    "fdd": (None, "directory"),
+    "fs": ("fsearch", None),
+    "fsd": ("fsearch", "directory"),
+    "ff": ("fff", None),
+    "ffd": ("fff", "directory"),
+}
+for key, (backend, mode) in expected.items():
+    obj = by_keyword[key]
+    uid = obj["uid"]
+    assert uid in data["connections"] and data["connections"][uid], f"no output action for {key}"
+    script = obj["config"].get("script", "")
+    if key == "{var:KW_TRIGGER}":
+        assert obj["config"].get("scriptfile") == "pathfind-alfred.sh"
+    else:
+        if backend:
+            assert f"export PATHFIND_BACKEND={backend}" in script, (key, script)
+        else:
+            assert "PATHFIND_BACKEND" not in script, (key, script)
+        assert f"export TYPE_OVERRIDE={'directory' if mode else ''}" in script, (key, script)
+print("PASS: pf/pfd, fd/fdd, fs/fsd, ff/ffd routing and output connections")
+PY
 zsh -n pathfind-alfred.sh
 zsh -n experimental/search.sh
 node --check experimental/fff-client.mjs
