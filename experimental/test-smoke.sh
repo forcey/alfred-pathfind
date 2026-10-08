@@ -55,7 +55,7 @@ else
 fi
 EOS
 chmod +x "$scratch/mock-fsearch"
-gated="$HOME/Documents/pathfind-privacy-smoke-$"
+gated="$HOME/Documents/pathfind-privacy-smoke"
 mkdir -p "$gated"
 PATHFIND_PATHS="$gated"
 PATHFIND_BACKEND=fsearch
@@ -63,8 +63,15 @@ PATHFIND_FSEARCH_BIN="$scratch/mock-fsearch"
 export PATHFIND_PATHS PATHFIND_BACKEND PATHFIND_FSEARCH_BIN
 result="$(./pathfind-alfred.sh 'tax')"
 jq -e '.items[0].title == "Search engine error (fsearch)" and (.items[0].subtitle | contains("Full Disk Access"))' <<<"$result" >/dev/null
+# The user may configure a shortcut pointing into a privacy-gated directory.
+ln -s "$gated" "$scratch/Google Drive"
+PATHFIND_PATHS="$scratch/Google Drive"
+export PATHFIND_PATHS
+result="$(./pathfind-alfred.sh 'tax')"
+jq -e '.items[0].title == "Search engine error (fsearch)"' <<<"$result" >/dev/null
+rm "$scratch/Google Drive"
 rmdir "$gated"
-echo "PASS: missing Full Disk Access appears as an Alfred error"
+echo "PASS: Full Disk Access warning covers gated directories and symlink aliases"
 
 unset PATHFIND_FSEARCH_BIN
 PATHFIND_PATHS="$scratch"
