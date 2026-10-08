@@ -85,8 +85,14 @@ status_json="$("$fsearch_bin" status 2>/dev/null)"
 access="$(print -r -- "$status_json" | jq -r 'if has("full_disk_access") then .full_disk_access else empty end' 2>/dev/null)"
 for root in "${paths[@]}"; do
   [[ -n "$root" ]] || continue
-  [[ "$root" == "~" ]] && root="$HOME"
-  [[ "$root" == "~/"* ]] && root="$HOME/${root#~/}"
+  # Alfred stores roots literally (e.g. ~/Google Drive). Expand the
+  # leading tilde without shell pattern matching, which is sensitive to zsh
+  # tilde expansion and otherwise skips valid roots.
+  if [[ "$root" == "~" ]]; then
+    root="$HOME"
+  elif [[ "${root[1,2]}" == "~/" ]]; then
+    root="$HOME/${root[3,-1]}"
+  fi
   if [[ ! -d "$root" ]]; then
     echo "PathFind fsearch: skipping missing root $root" >&2
     continue
