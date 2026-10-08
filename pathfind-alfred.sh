@@ -46,6 +46,16 @@ if [[ -z $1 ]]; then
 	exit
 fi
 
+# Indexed backends need explicit roots; silently defaulting to the installed
+# workflow folder would produce a misleading empty search in Alfred.
+if [[ -n $PATHFIND_BACKEND && -z $PATHFIND_PATHS ]]; then
+  jq -n --arg backend "$PATHFIND_BACKEND" '
+    {items:[{title:("Configure Include paths for " + $backend),
+             subtitle:"Alfred Preferences > Workflows > PathFind Search Engine Experiment > Configure Workflow",
+             valid:false,icon:{path:"error.png"}}]}'
+  exit 0
+fi
+
 # ensure we have at least 1 path
 if [[ -z $PATHFIND_PATHS ]]; then
 	export PATHFIND_PATHS=$PWD
