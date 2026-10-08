@@ -47,6 +47,18 @@ async function getFinder(root) {
   return finders.get(root);
 }
 
+function matchesLiteralQuery(path, query) {
+  // FFF uses typo-tolerant fuzzy matching and may return candidates that
+  // PathFind would never return. For ordinary literal queries, preserve the
+  // original AND-across-the-full-path behavior before sending to jq.
+  // Do not reinterpret advanced FFF operators or regex-like queries here.
+  const words = query.toLowerCase().split(/[\\/\s]+/).filter(Boolean);
+  if (!words.length) return true;
+  if (words.some(w => /[?*\[\]{}()|^$]/.test(w))) return true;
+  const lower = path.toLowerCase();
+  return words.every(word => lower.includes(word));
+}
+
 function matchesExcludes(path, exclusions) {
   const segments = path.split('/');
   return exclusions.some(e => {
@@ -87,7 +99,7 @@ async function handle(req) {
   const exclusions = Array.isArray(req.exclude) ? req.exclude : [];
   const hits = [...new Set(results.flat())].filter(p => {
     if (!req.includeHidden && p.split('/').some((s, i) => i > 0 && s.startsWith('.'))) return false;
-    return !matchesExcludes(p, exclusions);
+    return matchesLiteralQuery(p, req.query) && !matchesExcludes(p, exclusions);
   });
   return { ok: true, hits, took_us: Number((process.hrtime.bigint() - started) / 1000n) };
 }
