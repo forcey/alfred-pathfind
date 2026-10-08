@@ -34,6 +34,7 @@ def main():
     parser.add_argument("--runs", type=int, default=12)
     parser.add_argument("--mode", choices=["directory", "file", "mixed"], default="directory")
     parser.add_argument("--expected", help="Expected result path, to display its rank")
+    parser.add_argument("--expected-suffix", help="Match the tail of a path (e.g. Tax/2025), useful for macOS Finder aliases")
     args = parser.parse_args()
     if args.runs < 1:
         parser.error("--runs must be positive")
@@ -62,6 +63,24 @@ def main():
             normalized = [os.path.realpath(p.rstrip("/")) for p in paths]
             expected = os.path.realpath(args.expected) if args.expected else None
             rank = (normalized.index(expected) + 1) if expected in normalized else "-"
+            # A Google Drive Finder shortcut can look like ~/Google Drive but
+            # enumerate under ~/Library/CloudStorage/.../My Drive. If normal
+            # filesystem identity cannot establish equivalence, allow an
+            # explicit suffix comparison rather than claiming the hit is absent.
+            if rank == "-" and args.expected:
+                for i, item in enumerate(paths):
+                    try:
+                        if os.path.samefile(args.expected, item):
+                            rank = i + 1
+                            break
+                    except OSError:
+                        pass
+            if rank == "-" and args.expected_suffix:
+                suffix = "/" + args.expected_suffix.strip("/").casefold()
+                for i, item in enumerate(paths):
+                    if item.rstrip("/").casefold().endswith(suffix):
+                        rank = str(i + 1) + "*"
+                        break
             print(f"{backend:<9} {measurements[0]:>10.1f} {p50:>10.1f} {p95:>10.1f} {len(paths):>8} {str(rank):>14}")
             for item in paths[:3]:
                 print("  ", item)
