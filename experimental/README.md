@@ -30,7 +30,14 @@ deprioritization from main. The **candidate sets differ** (and are capped to
 
    The install command copies `fsearch` to `~/.local/bin/fsearch`. Its
    full-disk daemon indexes once and maintains its index with FSEvents.
-   Grant Full Disk Access to that installed binary to cover protected paths.
+   **Full Disk Access matters for this test**: fsearch explicitly excludes
+   ~/Library/CloudStorage, Documents, Desktop, and Downloads without it.
+   In System Settings > Privacy & Security > Full Disk Access, add
+   ~/.local/bin/fsearch, then restart the daemon. Its old index may still
+   omit folders indexed before permissions were granted; if so, stop the
+   daemon before safely moving aside
+   ~/Library/Application Support/FSearch/index.bin to force a new crawl.
+   Check `fsearch status` for `"full_disk_access": true`.
    First indexing may take tens of seconds. A Unix-socket daemon stays alive.
    No administrator privileges should be needed for the per-user installation.
 
@@ -65,8 +72,13 @@ deprioritization from main. The **candidate sets differ** (and are capped to
 
 4. Open the imported experimental workflow's Configuration in Alfred.
    Copy the same Include paths, excludes, hidden-file and max-depth settings
-   as the main workflow. Bear in mind that each indexer has **different**
-   support for these flags; this is a comparison, not drop-in parity.
+   as the main workflow. **A `PATHFIND_PATHS` export in Terminal does not
+   configure Alfred**. If you see zero hits in Alfred despite successful
+   command-line tests, check the imported experimental workflow configuration.
+   Prefer the canonical CloudStorage path instead of a Finder alias (your
+   original `~/Google Drive` shortcut may not refer to the indexed path).
+   Bear in mind that each indexer has **different** support for these flags;
+   this is a comparison, not drop-in parity.
 
    If Alfred cannot locate Node or fsearch from its constrained launch
    environment, install Node in /opt/homebrew/bin or /usr/local/bin and
@@ -84,13 +96,15 @@ $HOME/Library/CloudStorage"
 node experimental/fff-client.mjs warm
 
 python3 experimental/benchmark.py 'tax/2025' --mode directory \
-  --runs 15 --expected "$HOME/Google Drive/Tax/2025"
+  --runs 15 --expected-suffix "Tax/2025"
 ```
 
 The Python script measures the **entire Alfred Script Filter** invocation,
 including process startup, search, path scoring, and JSON generation. It
 prints first-call, median and p95 timings, result counts and the expected
-item's final rank. For fair comparisons, use matching search roots and
+item's final rank. `--expected-suffix` uses a path-tail comparison (marked
+with an asterisk) when Google Drive Finder aliases obscure filesystem identity.
+For fair comparisons, use matching search roots and
 several queries. Match **relevance and recall**, not just response time.
 
 The FFF daemon can be stopped with:
@@ -132,3 +146,21 @@ export PATHFIND_PATHS="$HOME/Documents"
 TYPE_OVERRIDE=directory ./experimental/search.sh fsearch 'tax/2025'
 TYPE_OVERRIDE=directory ./experimental/search.sh fff 'tax/2025'
 ```
+
+## Diagnosing an empty Alfred search
+
+The experimental Script Filter now shows an error item if a backend fails,
+including messages about missing Full Disk Access. If it simply says
+"Nothing found", the subtitle shows which Include paths Alfred actually used.
+
+Try `pfxd tax/2025`, `pfsd tax/2025`, and `pf0d tax/2025` with identical
+Include paths. The Terminal `export PATHFIND_PATHS=...` only influences
+terminal commands; Alfred has its own workflow configuration. If
+`fsearch status` says `full_disk_access: false`, it cannot search
+Google Drive CloudStorage. When changing its permissions, restart it and
+rebuild the index if those paths remain missing.
+
+After pulling a new branch commit, run `./build.sh` then double-click
+`dist/PathFind.alfredworkflow` to update the installed experimental workflow.
+The running FFF service can be restarted with
+`node experimental/fff-client.mjs stop` before warming the index again.
