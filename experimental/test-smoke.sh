@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -euxo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
@@ -9,7 +9,7 @@ command -v fd >/dev/null
 command -v gawk >/dev/null
 command -v jq >/dev/null
 
-plutil -lint info.plist >/dev/null
+plutil -lint info.plist
 zsh -n pathfind-alfred.sh
 zsh -n experimental/search.sh
 node --check experimental/fff-client.mjs
