@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>bundleid</key>
-	<string>com.forcey.pathfind.search-experiment</string>
+	<string>com.luckman212.pathfind</string>
 	<key>connections</key>
 	<dict>
 		<key>16CD3811-386A-4E8D-B707-898E1E204EE7</key>
@@ -577,6 +577,72 @@
 				<true/>
 			</dict>
 		</array>
+		<key>FDFD0001-0045-4913-A110-FDFD00000001</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>FA84AEE1-D129-401A-9CF3-FB0A5F5D92F4</string>
+				<key>modifiers</key>
+				<integer>524288</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<true/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>BD28E2F9-F7AB-44C5-8DDD-9702B9B8ADBE</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>3DD31854-C534-43F5-8322-53F46D88CA34</string>
+				<key>modifiers</key>
+				<integer>1572864</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<true/>
+			</dict>
+		</array>
+		<key>FDFD0002-0045-4913-A110-FDFD00000002</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>FA84AEE1-D129-401A-9CF3-FB0A5F5D92F4</string>
+				<key>modifiers</key>
+				<integer>524288</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<true/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>BD28E2F9-F7AB-44C5-8DDD-9702B9B8ADBE</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>3DD31854-C534-43F5-8322-53F46D88CA34</string>
+				<key>modifiers</key>
+				<integer>1572864</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<true/>
+			</dict>
+		</array>
 	</dict>
 	<key>createdby</key>
 	<string>luckman212</string>
@@ -585,7 +651,7 @@
 	<key>disabled</key>
 	<false/>
 	<key>name</key>
-	<string>PathFind Search Engine Experiment</string>
+	<string>PathFind</string>
 	<key>objects</key>
 	<array>
 		<dict>
@@ -792,7 +858,7 @@
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>keyword</key>
-				<string>pf0d</string>
+				<string>pfd</string>
 				<key>queuedelaycustom</key>
 				<integer>3</integer>
 				<key>queuedelayimmediatelyinitially</key>
@@ -830,6 +896,7 @@ export WF_TITLE_OVERRIDE="$alfred_workflow_name (Folders only)"
 			<key>version</key>
 			<integer>3</integer>
 		</dict>
+
 		<dict>
 			<key>config</key>
 			<dict>
@@ -846,7 +913,116 @@ export WF_TITLE_OVERRIDE="$alfred_workflow_name (Folders only)"
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>keyword</key>
-				<string>pfs</string>
+				<string>fd</string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyinitially</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>1</integer>
+				<key>queuemode</key>
+				<integer>2</integer>
+				<key>runningsubtext</key>
+				<string></string>
+				<key>script</key>
+				<string>export TYPE_OVERRIDE=
+export WF_TITLE_OVERRIDE="PathFind fd (Files + folders)"
+./pathfind-alfred.sh "$1"
+</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>skipuniversalaction</key>
+				<true/>
+				<key>subtext</key>
+				<string>{const:alfred_workflow_description}</string>
+				<key>title</key>
+				<string>PathFind fd (Files + folders)</string>
+				<key>type</key>
+				<integer>11</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>FDFD0001-0045-4913-A110-FDFD00000001</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>0</integer>
+				<key>argumenttreatemptyqueryasnil</key>
+				<false/>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string>fdd</string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyinitially</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>1</integer>
+				<key>queuemode</key>
+				<integer>2</integer>
+				<key>runningsubtext</key>
+				<string></string>
+				<key>script</key>
+				<string>export TYPE_OVERRIDE=directory
+export WF_TITLE_OVERRIDE="PathFind fd (Folders only)"
+./pathfind-alfred.sh "$1"
+</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>skipuniversalaction</key>
+				<true/>
+				<key>subtext</key>
+				<string>{const:alfred_workflow_description}</string>
+				<key>title</key>
+				<string>PathFind fd (Folders only)</string>
+				<key>type</key>
+				<integer>11</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>FDFD0002-0045-4913-A110-FDFD00000002</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>0</integer>
+				<key>argumenttreatemptyqueryasnil</key>
+				<false/>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string>fs</string>
 				<key>queuedelaycustom</key>
 				<integer>3</integer>
 				<key>queuedelayimmediatelyinitially</key>
@@ -901,7 +1077,7 @@ export WF_TITLE_OVERRIDE="PathFind fsearch (Files + folders)"
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>keyword</key>
-				<string>pfsd</string>
+				<string>fsd</string>
 				<key>queuedelaycustom</key>
 				<integer>3</integer>
 				<key>queuedelayimmediatelyinitially</key>
@@ -956,7 +1132,7 @@ export WF_TITLE_OVERRIDE="PathFind fsearch (directory)"
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>keyword</key>
-				<string>pfx</string>
+				<string>ff</string>
 				<key>queuedelaycustom</key>
 				<integer>3</integer>
 				<key>queuedelayimmediatelyinitially</key>
@@ -1011,7 +1187,7 @@ export WF_TITLE_OVERRIDE="PathFind fff (Files + folders)"
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>keyword</key>
-				<string>pfxd</string>
+				<string>ffd</string>
 				<key>queuedelaycustom</key>
 				<integer>3</integer>
 				<key>queuedelayimmediatelyinitially</key>
@@ -1297,7 +1473,7 @@ export WF_TITLE_OVERRIDE="PathFind fff (directory)"
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>keyword</key>
-				<string>pf0f</string>
+				<string>pff</string>
 				<key>queuedelaycustom</key>
 				<integer>3</integer>
 				<key>queuedelayimmediatelyinitially</key>
@@ -1953,6 +2129,20 @@ The workflow was inspired by [this post](https://www.alfredforum.com/topic/22886
 			<key>ypos</key>
 			<real>1060</real>
 		</dict>
+		<key>FDFD0001-0045-4913-A110-FDFD00000001</key>
+		<dict>
+			<key>xpos</key>
+			<real>30</real>
+			<key>ypos</key>
+			<real>1150</real>
+		</dict>
+		<key>FDFD0002-0045-4913-A110-FDFD00000002</key>
+		<dict>
+			<key>xpos</key>
+			<real>30</real>
+			<key>ypos</key>
+			<real>1230</real>
+		</dict>
 	</dict>
 	<key>userconfigurationconfig</key>
 	<array>
@@ -1981,9 +2171,9 @@ The workflow was inspired by [this post](https://www.alfredforum.com/topic/22886
 			<key>config</key>
 			<dict>
 				<key>default</key>
-				<string>pf0</string>
+				<string>pf</string>
 				<key>placeholder</key>
-				<string>pf0</string>
+				<string>pf</string>
 				<key>required</key>
 				<true/>
 				<key>trim</key>
