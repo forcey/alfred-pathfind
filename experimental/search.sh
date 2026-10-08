@@ -63,6 +63,10 @@ case "${TYPE_OVERRIDE:-}" in
   file) kind=("kind:file");;
 esac
 
+# fsearch intentionally omits consent-gated directories without Full Disk
+# Access. Surface the missing coverage instead of silently reporting no hits.
+status_json="$("$fsearch_bin" status 2>/dev/null)"
+access="$(print -r -- "$status_json" | jq -r '.full_disk_access // empty' 2>/dev/null)"
 for root in "${paths[@]}"; do
   [[ -n "$root" ]] || continue
   [[ "$root" == "~" ]] && root="$HOME"
@@ -72,6 +76,16 @@ for root in "${paths[@]}"; do
     continue
   fi
   scope="$(cd -P "$root" && pwd)"
+  # Under macOS privacy rules, the fsearch daemon skips these locations when
+  # full_disk_access is false, even though fd may traverse them successfully.
+  case "$scope" in
+    "$HOME"/Library/CloudStorage|"$HOME"/Library/CloudStorage/*|"$HOME"/Library/Mobile\ Documents|"$HOME"/Library/Mobile\ Documents/*|"$HOME"/Documents|"$HOME"/Documents/*|"$HOME"/Desktop|"$HOME"/Desktop/*|"$HOME"/Downloads|"$HOME"/Downloads/*)
+      if [[ "$access" == "false" ]]; then
+        echo "fsearch lacks Full Disk Access, so it does not index $scope. Grant it to ~/.local/bin/fsearch in System Settings, then rebuild the fsearch index." >&2
+        exit 3
+      fi
+      ;;
+  esac
   # Quoting the entire in: value keeps spaces in Google Drive paths intact.
   # fsearch parses query words; the quote characters must reach that parser.
   "$fsearch_bin" "$query" "in:\"$scope\"" "${kind[@]}" "limit:500" --json |
