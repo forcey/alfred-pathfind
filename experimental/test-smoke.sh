@@ -76,7 +76,7 @@ echo "PASS: Full Disk Access warning covers gated directories and symlink aliase
 # Reproduce an Alfred-only configuration that includes a tilde symlink root.
 # The old adapter could skip these while succeeding with absolute CLI roots.
 mkdir -p "$scratch/GoogleDrive-real/My Drive/Tax/2025"
-link="$HOME/PathFind Google Drive CI $"
+link="$HOME/PathFind Google Drive CI ${RANDOM}"
 ln -s "$scratch/GoogleDrive-real" "$link"
 cat > "$scratch/mock-fsearch-ok" <<'EOS'
 #!/bin/sh
