@@ -13,6 +13,52 @@ Searches are case-insensitive, and the order in which you enter your search term
 
 You can pass *quoted strings* to be more explicit with your queries, e.g. "annual report" will NOT match a file named "annual sales report". Only **double-quotes** are considered—single-quotes are parsed as normal punctuation. Non-quoted strings will be split on spaces (which has always been the case).
 
+## Search engines in this fork
+
+This fork includes three search backends, all using the same path-aware ranking
+(which prefers exact paths like `Tax/2025` and demotes generated directories
+like `node_modules` and `__pycache__`).
+
+| Keyword | Engine | Search type |
+|---|---|---|
+| `pf` / `pfd` | original `fd` | files + folders / folders only |
+| `fd` / `fdd` | `fd` (comparison baseline) | files + folders / folders only |
+| `fs` / `fsd` | [fsearch](https://github.com/noahdunnagan/fsearch) | files + folders / folders only |
+| `ff` / `ffd` | [fff](https://github.com/dmtrKovalenko/fff) | files + folders / folders only |
+
+The original `pff`, `pfc`, and auxiliary commands remain available.
+
+To build the complete workflow on macOS:
+
+```sh
+brew install fd gawk jq
+npm install --prefix experimental  # FFF Node SDK; needs Node.js 18+
+./build.sh
+open dist/PathFind.alfredworkflow
+```
+
+`fsearch` is a **separate** Rust CLI and daemon; install it according to its
+[upstream README](https://github.com/noahdunnagan/fsearch).
+You may need to grant its binary Full Disk Access on macOS, restart the
+daemon, and rebuild its index after initially denying access.
+
+In Alfred's **Configure Workflow**, set the **Include paths** to the desired
+directories. The `~/Google Drive` shortcut works when it points to the
+physical directory under `~/Library/CloudStorage`; the indexed adapters
+resolve configured symlinks. If Alfred cannot find Node, fill in the
+**Node executable (FFF)** setting with the absolute output of
+`command -v node`.
+
+**Important for existing users:** this branch is now built with the original
+`com.luckman212.pathfind` workflow bundle ID, so importing it updates your
+usual PathFind installation. Remove/disable the separately installed
+**PathFind Search Engine Experiment** workflow (bundle ID
+`com.forcey.pathfind.search-experiment`) to avoid having two different sets
+of keywords and indexes active. Your existing Alfred workflow configuration
+may be preserved when reimporting.
+
+See [the backend benchmark and diagnostics guide](experimental/README.md).
+
 ## Configuration
 
 You can customize various options via the Configure Workflow button, or by activating the `:pf` keyword. Most are self-explanatory, I will attempt to better document them in the near future.
