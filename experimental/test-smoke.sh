@@ -24,7 +24,9 @@ by_keyword = {}
 for obj in data["objects"]:
     if obj["type"] != "alfred.workflow.input.scriptfilter":
         continue
-    keyword = obj["config"]["keyword"]
+    keyword = obj["config"].get("keyword")
+    if not keyword:
+        continue
     for token in keyword.split("||"):
         assert token not in by_keyword, f"duplicate keyword {token}"
         by_keyword[token] = obj
