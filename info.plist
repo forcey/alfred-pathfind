@@ -1960,9 +1960,9 @@ The workflow was inspired by [this post](https://www.alfredforum.com/topic/22886
 			<key>config</key>
 			<dict>
 				<key>default</key>
-				<string>pf</string>
+				<string>pf0</string>
 				<key>placeholder</key>
-				<string>pf||find</string>
+				<string>pf0</string>
 				<key>required</key>
 				<true/>
 				<key>trim</key>
