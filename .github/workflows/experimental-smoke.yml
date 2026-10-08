@@ -1,11 +1,13 @@
-name: Experimental search engines
+name: PathFind search engines
 on:
   push:
-    branches: ["experiment/search-engines"]
+    branches: ["main", "experiment/search-engines"]
+  pull_request:
+    branches: ["main"]
   workflow_dispatch:
 
 concurrency:
-  group: pathfind-experiment-${{ github.ref }}
+  group: pathfind-search-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
