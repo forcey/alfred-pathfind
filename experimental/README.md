@@ -1,20 +1,20 @@
-# Experimental search engines for PathFind
+# PathFind search-engine implementations and benchmarking
 
-This branch is deliberately **not** merged into main. The Alfred bundle ID is
-`com.forcey.pathfind.search-experiment`, so it can coexist with the normal
-PathFind workflow. Configure the **same Include paths** in both workflows.
+The `experimental/` source directory contains the optional indexed search
+backends used by the **main PathFind workflow**. These components remain
+optional even though the Alfred keywords ship together.
 
-| Keyword | Engine | Type |
+| Keywords | Backend | Mode |
 |---|---|---|
-| `pfd` (your existing installed workflow) | fd | folders |
-| `pf0`, `pf0d`, `pf0f` | fd | mixed, folders, files |
-| `pfs`, `pfsd` | [fsearch](https://github.com/noahdunnagan/fsearch) | mixed, folders |
-| `pfx`, `pfxd` | [fff](https://github.com/dmtrKovalenko/fff) | mixed, folders |
+| `pf` / `pfd` | original fd | mixed / folders |
+| `fd` / `fdd` | fd baseline | mixed / folders |
+| `fs` / `fsd` | fsearch | mixed / folders |
+| `ff` / `ffd` | fff | mixed / folders |
 
-All backends send paths to the same `pathfind-alfred.sh` renderer, so the
-experimental backends inherit the `tax/2025` path ranking and junk-dir
-deprioritization from main. The **candidate sets differ** (and are capped to
-500 candidates per configured root for each experimental backend).
+The workflow bundle ID is `com.luckman212.pathfind` (the original), so
+installing the package **updates the existing PathFind workflow**.
+Uninstall the obsolete `PathFind Search Engine Experiment` workflow if it
+is still installed alongside it.
 
 ## Installation on macOS
 
@@ -68,13 +68,13 @@ deprioritization from main. The **candidate sets differ** (and are capped to
    If `experimental/node_modules` exists during packaging, the build includes
    it so the imported workflow has the native Node dependencies. If absent,
    `pfx` / `pfxd` will not work until the dependencies are installed inside
-   the imported experimental workflow directory.
+   the imported PathFind workflow directory.
 
-4. Open the imported experimental workflow's Configuration in Alfred.
+4. Open the imported PathFind workflow's Configuration in Alfred.
    Copy the same Include paths, excludes, hidden-file and max-depth settings
    as the main workflow. **A `PATHFIND_PATHS` export in Terminal does not
    configure Alfred**. If you see zero hits in Alfred despite successful
-   command-line tests, check the imported experimental workflow configuration.
+   command-line tests, check the imported PathFind workflow configuration.
    Prefer the canonical CloudStorage path instead of a Finder alias (your
    original `~/Google Drive` shortcut may not refer to the indexed path).
    Bear in mind that each indexer has **different** support for these flags;
@@ -88,7 +88,7 @@ deprioritization from main. The **candidate sets differ** (and are capped to
 ## Benchmark
 
 Before benchmarking FFF, prime its index **using the same Include paths**
-as the Alfred experimental workflow:
+as the Alfred PathFind workflow:
 
 ```sh
 export PATHFIND_PATHS="$HOME/Documents
@@ -161,6 +161,6 @@ Google Drive CloudStorage. When changing its permissions, restart it and
 rebuild the index if those paths remain missing.
 
 After pulling a new branch commit, run `./build.sh` then double-click
-`dist/PathFind.alfredworkflow` to update the installed experimental workflow.
+`dist/PathFind.alfredworkflow` to update the installed PathFind workflow.
 The running FFF service can be restarted with
 `node experimental/fff-client.mjs stop` before warming the index again.
