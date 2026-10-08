@@ -1960,6 +1960,27 @@ The workflow was inspired by [this post](https://www.alfredforum.com/topic/22886
 			<key>config</key>
 			<dict>
 				<key>default</key>
+				<string></string>
+				<key>placeholder</key>
+				<string>/absolute/path/from/command -v node</string>
+				<key>required</key>
+				<false/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string>Optional absolute path to the Node executable for the FFF experiment. Paste the output of command -v node from Terminal when Alfred cannot find Node.</string>
+			<key>label</key>
+			<string>Node executable (FFF)</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>PATHFIND_FFF_NODE_BIN</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
 				<string>pf0</string>
 				<key>placeholder</key>
 				<string>pf0</string>
