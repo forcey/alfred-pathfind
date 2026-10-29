@@ -50,7 +50,7 @@ def main():
     print("Mode:", args.mode, "- runs per backend:", args.runs)
     print("Note: first-run latency and later warmed queries are reported separately.\n")
     print(f'{"Backend":<9} {"first ms":>10} {"p50 ms":>10} {"p95 ms":>10} {"items":>8} {"expected rank":>14}')
-    for backend in ["fd", "fsearch", "fff"]:
+    for backend in ["fd", "fff"]:
         try:
             measurements = []
             paths = []

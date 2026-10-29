@@ -35,8 +35,6 @@ expected = {
     "pfd": (None, "directory"),
     "fd": (None, None),
     "fdd": (None, "directory"),
-    "fs": ("fsearch", None),
-    "fsd": ("fsearch", "directory"),
     "ff": ("fff", None),
     "ffd": ("fff", "directory"),
 }
@@ -53,7 +51,9 @@ for key, (backend, mode) in expected.items():
         else:
             assert "PATHFIND_BACKEND" not in script, (key, script)
         assert f"export TYPE_OVERRIDE={'directory' if mode else ''}" in script, (key, script)
-print("PASS: pf/pfd, fd/fdd, fs/fsd, ff/ffd routing and output connections")
+for retired in ("fs", "fsd"):
+    assert retired not in by_keyword, f"retired fsearch keyword {retired} still present"
+print("PASS: pf/pfd, fd/fdd, ff/ffd routing and output connections")
 PY
 zsh -n pathfind-alfred.sh
 zsh -n experimental/search.sh
@@ -89,61 +89,16 @@ result="$(./pathfind-alfred.sh 'tax')"
 jq -e '.items[0].title | startswith("Configure Include paths")' <<<"$result" >/dev/null
 echo "PASS: missing Alfred Include paths have an actionable error"
 
-# Privacy protection is observable without crawling the real home directory.
-# This mock simulates the fsearch status JSON that excludes CloudStorage.
-cat > "$scratch/mock-fsearch" <<'EOS'
-#!/bin/sh
-if [ "$1" = status ]; then
-  printf '%s\n' '{"ok":true,"full_disk_access":false}'
-else
-  printf '%s\n' '{"ok":true,"hits":[]}'
-fi
-EOS
-chmod +x "$scratch/mock-fsearch"
-gated="$HOME/Documents/pathfind-privacy-smoke"
-mkdir -p "$gated"
-PATHFIND_PATHS="$gated"
-PATHFIND_BACKEND=fsearch
-PATHFIND_FSEARCH_BIN="$scratch/mock-fsearch"
-export PATHFIND_PATHS PATHFIND_BACKEND PATHFIND_FSEARCH_BIN
+# Backend failures surface as an Alfred error item rather than "Nothing found".
+PATHFIND_PATHS="$scratch"
+PATHFIND_BACKEND=fff
+PATHFIND_FFF_NODE_BIN="$scratch/missing-node"
+export PATHFIND_PATHS PATHFIND_BACKEND PATHFIND_FFF_NODE_BIN
 result="$(./pathfind-alfred.sh 'tax')"
-jq -e '.items[0].title == "Search engine error (fsearch)" and (.items[0].subtitle | contains("Full Disk Access"))' <<<"$result" >/dev/null
-# The user may configure a shortcut pointing into a privacy-gated directory.
-ln -s "$gated" "$scratch/Google Drive"
-PATHFIND_PATHS="$scratch/Google Drive"
-export PATHFIND_PATHS
-result="$(./pathfind-alfred.sh 'tax')"
-jq -e '.items[0].title == "Search engine error (fsearch)"' <<<"$result" >/dev/null
-rm "$scratch/Google Drive"
-rmdir "$gated"
-echo "PASS: Full Disk Access warning covers gated directories and symlink aliases"
+jq -e '.items[0].title == "Search engine error (fff)"' <<<"$result" >/dev/null
+echo "PASS: backend failure is shown as an actionable Alfred item"
 
-# Reproduce an Alfred-only configuration that includes a tilde symlink root.
-# The old adapter could skip these while succeeding with absolute CLI roots.
-mkdir -p "$scratch/GoogleDrive-real/My Drive/Tax/2025"
-link="$HOME/PathFind Google Drive CI ${RANDOM}"
-ln -s "$scratch/GoogleDrive-real" "$link"
-cat > "$scratch/mock-fsearch-ok" <<'EOS'
-#!/bin/sh
-if [ "$1" = status ]; then
-  printf '%s\n' '{"ok":true,"full_disk_access":true}'
-else
-  printf '%s\n' "$@" > "$PATHFIND_FSEARCH_LOG"
-  printf '{"ok":true,"hits":[{"path":"%s"}]}\n' "$PATHFIND_FSEARCH_EXPECTED"
-fi
-EOS
-chmod +x "$scratch/mock-fsearch-ok"
-export PATHFIND_PATHS="~/${link##*/}"
-export PATHFIND_FSEARCH_BIN="$scratch/mock-fsearch-ok"
-export PATHFIND_FSEARCH_LOG="$scratch/fsearch-args.txt"
-export PATHFIND_FSEARCH_EXPECTED="$scratch/GoogleDrive-real/My Drive/Tax/2025"
-result="$(./pathfind-alfred.sh 'tax/2025')"
-jq -e --arg expected "$PATHFIND_FSEARCH_EXPECTED" '.items[0].arg == $expected' <<<"$result" >/dev/null
-grep -Fx "in:\"$scratch/GoogleDrive-real\"" "$PATHFIND_FSEARCH_LOG" >/dev/null
-rm "$link"
-echo "PASS: Alfred tilde + Google Drive symlink root resolves to canonical fsearch scope"
-
-unset PATHFIND_FSEARCH_BIN
+unset PATHFIND_FFF_NODE_BIN
 PATHFIND_PATHS="$scratch"
 PATHFIND_BACKEND=""
 
